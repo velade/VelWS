@@ -1,16 +1,18 @@
 # VelWS
 一个简单易用的Websocket服务端库，支持ws与wss
 ## 使用方法
-### 启动
+### 编写服务器文件
 1. 此项目只是一个类库，不能直接使用，你应该建立一个真正的服务器文件。
-2. 在服务器文件中引入类库
-3. 使用命名空间 VelWS\WS使用WS类或者VelWS\WSS使用WSS类
-4. 实例化类
-5. 调用start方法开始监听
+2. **添加防止超时的代码，非常重要，不添加服务器会在一定时间后因为超时而被关闭**
+3. 在服务器文件中引入类库
+4. 使用命名空间 VelWS\WS使用WS类 或者 VelWS\WSS使用WSS类
+5. 实例化类
+6. 调用start方法开始监听
 
 #### 示例代码WSS
 ```php
 header("Content-Type: text/html;charset=utf-8"); //设定字符集
+set_time_limit(0); //防止脚本超时
 require_once("velws.php"); //引入类库
 use VelWS\WSS; //使用命名空间
 
@@ -32,6 +34,7 @@ $ws->start(); //启动服务器
 #### 示例代码WS
 ```php
 header("Content-Type: text/html;charset=utf-8"); //设定字符集
+set_time_limit(0); //防止脚本超时
 require_once("velws.php"); //引入类库
 use VelWS\WS; //使用命名空间
 
@@ -47,8 +50,19 @@ $ws = new WS([
 );
 $ws->start(); //启动服务器
 ```
+#### 通常实际使用的简化代码
+```php
+header("Content-Type: text/html;charset=utf-8"); //设定字符集
+set_time_limit(0); //防止脚本超时
+require_once("velws.php"); //引入类库
+use VelWS\WS; //使用命名空间
+
+/*通常你只需要设定端口*/
+$ws = new WS(["port" => 10880]);
+$ws->start(); //启动服务器
+```
 ### 运行服务器文件
-因为一般的网站服务器都具有超时的限制，通常不能够长时间运行一个文件，且浏览器开启服务器文件大概率会导致无法关闭，也无法正常输出日志。因此服务器文件应该在控制台通过PHP命令运行。例如
+因为一般的网站服务器都具有强制超时的限制，通常不能够长时间运行一个文件，且浏览器开启服务器文件大概率会导致服务器无法真正关闭，也无法正常输出日志，因为分页会处于假死状态。因此服务器文件应该在控制台通过PHP命令直接运行，而不通过Apache等网站服务器。例如
 ```zsh
 user@user-pc ~ % php /web/path/server.php
 ```
