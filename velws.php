@@ -28,7 +28,8 @@ class WSS
         'local_pk'    => $this->sslkey,
         'disable_compression' => true,
         'verify_peer'         => false,
-        'ssltransport' => $this->transport
+        'ssltransport' => $this->transport,
+        'allow_self_signed' => true
       ]
     ];
   }
@@ -69,7 +70,16 @@ class WSS
           continue;
         }
         $msg = $this->decode($buffer);
-        $this->try_call_user_func($this->recv,$msg,$cid);
+        if(preg_match("/^\/vel-trigger\s(.+?)(\?(.+?))?$/",$msg,$func)){
+          $funcname = $func[1];
+          if(isset($func[3])){
+            $this->try_call_trigger_func($funcname,$func[3]);
+          }else{
+            $this->try_call_user_func($funcname);
+          }
+        }else{
+          $this->try_call_user_func($this->recv,$msg,$cid);
+        }
       }
     }
     fclose($this->server);
@@ -156,7 +166,19 @@ class WSS
     if(function_exists($func)){
       $args = func_get_args();
       array_splice($args,0,1);
+      foreach($args as $key => $arg){
+        $jsonval = json_decode($arg);
+        $args[$key] = (json_last_error() === JSON_ERROR_NONE)?$jsonval:$arg;
+      }
       $this->tryWriteLog("User","Call user callback function: $func");
+      return call_user_func_array($func,$args);
+    }
+    return false;
+  }
+  protected function try_call_trigger_func($func,$argArray){
+    if(function_exists($func)){
+      $args = json_decode($argArray);
+      $this->tryWriteLog("User","Call user trigger function: $func");
       return call_user_func_array($func,$args);
     }
     return false;
@@ -212,5 +234,107 @@ class WS extends WSS {
     }
     $this->clients[0] = $this->server;
     $this->echoMsg("System","WS Server Listening {$this->host} {$this->port}.","green");
+  }
+}
+
+class WSST {
+  protected $sock;
+  protected $headers;
+  protected $sslc;
+  protected $host;
+  protected $port;
+
+  public function __construct($host,$port,$certchain = ""){
+    $this->host = $host;
+    $this->port = $port;
+    $ssl = [
+      "ssl"=>[
+        "verify_peer" => false,
+        "allow_self_signed" => true,
+        "local_cert" => $certchain,
+        "ssltransport" => "tlsv1.3"
+      ]
+    ];
+
+    $this->sslc = stream_context_create($ssl);
+    
+    $this->headers = "GET / HTTP/1.1\r\n".
+    "Host: $host\r\n".
+    "Upgrade: websocket\r\n".
+    "Connection: Upgrade\r\n".
+    "Sec-WebSocket-Key: " . base64_encode(md5(uniqid() . rand(1, 8192), true))."\r\n".
+    "Sec-WebSocket-Version: 13\r\n\r\n";
+  }
+
+  protected function conn(){
+    $this->sock = stream_socket_client("ssl://{$this->host}:{$this->port}",$errno,$errstr,ini_get("default_socket_timeout"),STREAM_CLIENT_CONNECT,$this->sslc);
+    if(!$this->sock) echo $errno,$errstr;
+    fwrite($this->sock,$this->headers);
+    fread($this->sock,2000);
+  }
+
+  public function trigger($funcname) {
+    $this->conn();
+    $args = func_get_args();
+    array_splice($args,0,1);
+    $argsStr = json_encode($args);
+    fwrite($this->sock,$this->encode("/vel-trigger $funcname?$argsStr"));
+  }
+
+  protected function encode($msg) {
+    $frameHead = array();
+		$frame = '';
+		$payloadLength = strlen($msg);
+		$frameHead[0] = 129;
+
+		// set mask and payload length (using 1, 3 or 9 bytes)
+		if ($payloadLength>65535)
+		{
+			$payloadLengthBin = str_split(sprintf('%064b', $payloadLength), 8);
+			$frameHead[1] = 255;
+			for ($i = 0; $i<8; $i++)
+				$frameHead[$i + 2] = bindec($payloadLengthBin[$i]);
+
+			// most significant bit MUST be 0 (close connection if frame too big)
+			if ($frameHead[2]>127)
+			{
+				$this->close(1004);
+				return false;
+			}
+		}
+		elseif ($payloadLength>125)
+		{
+			$payloadLengthBin = str_split(sprintf('%016b', $payloadLength), 8);
+			$frameHead[1] = 254;
+			$frameHead[2] = bindec($payloadLengthBin[0]);
+			$frameHead[3] = bindec($payloadLengthBin[1]);
+		}
+		else
+			$frameHead[1] = $payloadLength + 128;
+
+		// convert frame-head to string:
+		foreach (array_keys($frameHead) as $i)
+			$frameHead[$i] = chr($frameHead[$i]);
+			// generate a random mask:
+			$mask = array();
+			for ($i = 0; $i<4; $i++)
+				$mask[$i] = chr(rand(0, 255));
+
+			$frameHead = array_merge($frameHead, $mask);
+		$frame = implode('', $frameHead);
+		// append payload to frame:
+		for ($i = 0; $i<$payloadLength; $i++)
+			$frame .=$msg[$i] ^ $mask[$i % 4];
+
+		return $frame;
+  }
+}
+
+class WST extends WSST {
+  protected function conn(){
+    $this->sock = stream_socket_client("tcp://{$this->host}:{$this->port}",$errno,$errstr,ini_get("default_socket_timeout"),STREAM_CLIENT_CONNECT);
+    if(!$this->sock) echo $errno,$errstr;
+    fwrite($this->sock,$this->headers);
+    fread($this->sock,2000);
   }
 }
