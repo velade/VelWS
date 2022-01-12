@@ -20,15 +20,27 @@ use VelWS\WSS; //使用命名空间
 $ws = new WSS([
     "host" => "0.0.0.0", //监听主机
     "port" => 10443, //监听端口
-    "logpath" => "", //用于指定日志记录文件，默认为空，即仅在控制台输出而不记录到文件。
-    "open" => "velws_open", //有新连接打开时回调函数名，也可直接以默认名velws_open建立函数。
-    "close" => "velws_close", //有连接关闭时回调函数名，也可直接以默认名velws_close建立函数。
-    "recv" => "velws_recv", //收到消息时回调函数名，也可直接以默认名velws_recv建立函数。
+    "logpath" => "", //用于指定日志记录文件，默认为空，即仅在控制台输出而不记录到文件
+    "open" => "velws_open", //有新连接打开时回调函数名，也可直接以默认名velws_open建立函数
+    "close" => "velws_close", //有连接关闭时回调函数名，也可直接以默认名velws_close建立函数
+    "recv" => "velws_recv", //收到消息时回调函数名，也可直接以默认名velws_recv建立函数
     "transport" => "tlsv1.3", //传输协议
     "sslcert" => __DIR__ . '/cert/cert.pem', //ssl公钥文件路径
-    "sslkey" => __DIR__ . '/cert/key.pem' //ssl私钥文件路径
+    "sslkey" => __DIR__ . '/cert/key.pem', //ssl私钥文件路径
+    "sslfullchain" => __DIR__ . '/cert/certchain.pem' //ssl完整链，传此参数可替代分开的sslcert与sslkey，此参数优先于其它证书设定
 ]
 );
+$ws->start(); //启动服务器
+```
+####  - 通常实际使用的简化代码
+```php
+header("Content-Type: text/html;charset=utf-8"); //设定字符集
+set_time_limit(0); //防止脚本超时
+require_once("velws.php"); //引入类库
+use VelWS\WSS; //使用命名空间
+
+/*通常你只需要设定端口与证书链*/
+$ws = new WSS(["port" => 10880,"sslfullchain" => __DIR__."/cert/fullchain.pem"]);
 $ws->start(); //启动服务器
 ```
 #### 示例代码WS
@@ -42,15 +54,15 @@ use VelWS\WS; //使用命名空间
 $ws = new WS([
     "host" => "0.0.0.0", //监听主机
     "port" => 10880, //监听端口
-    "logpath" => "", //用于指定日志记录文件，默认为空，即仅在控制台输出而不记录到文件。
-    "open" => "velws_open", //有新连接打开时回调函数名，也可直接以默认名velws_open建立函数。
-    "close" => "velws_close", //有连接关闭时回调函数名，也可直接以默认名velws_close建立函数。
-    "recv" => "velws_recv" //收到消息时回调函数名，也可直接以默认名velws_recv建立函数。
+    "logpath" => "", //用于指定日志记录文件，默认为空，即仅在控制台输出而不记录到文件
+    "open" => "velws_open", //有新连接打开时回调函数名，也可直接以默认名velws_open建立函数
+    "close" => "velws_close", //有连接关闭时回调函数名，也可直接以默认名velws_close建立函数
+    "recv" => "velws_recv" //收到消息时回调函数名，也可直接以默认名velws_recv建立函数
 ]
 );
 $ws->start(); //启动服务器
 ```
-#### 通常实际使用的简化代码
+####  - 通常实际使用的简化代码
 ```php
 header("Content-Type: text/html;charset=utf-8"); //设定字符集
 set_time_limit(0); //防止脚本超时
@@ -125,14 +137,14 @@ $ws->clients;
 ```
 ### 外部事件调用
 为了方便从服务器外部的PHP调用发送推送等功能，VelWS提供了一种方式来调用**事先被定义好的**自定义事件，这些事件在书写服务器文件时写在其中，在服务器执行过程中不可变动，并且是单向的触发。
-提供此功能的目的是解决以往的一个问替，以往服务器端想要在发生数据变更时及时的通知客户端就需要不停的论询数据库，这无疑会增加数据库的负担，因此基于事件触发的更新是一个优秀的解决方案，而此功能正是在这方面可以大显身手。例如当一个内容更新时，我们可以在处理内容的数据库更新同时利用此功能向WS服务器触发一个通知事件，这样数据的监控基于接口的触发，接口的触发基于前端的用户事件，及时性与性能都得到了最佳的保障。
+提供此功能的目的是解决以往的一个问题，以往服务器端想要在发生数据变更时及时的通知客户端就需要不停的轮询数据库，这无疑会增加数据库的负担，因此基于事件触发的更新是一个优秀的解决方案，而此功能正是在这方面可以大显身手。例如当一个内容更新时，我们可以在处理内容的数据库更新同时利用此功能向WS服务器触发一个通知事件，这样数据的监控基于接口的触发，接口的触发基于前端的用户事件，及时性与性能都得到了最佳的保障。
 
 #### WSS服务器触发方法
 ```php
 require_once("velws.php"); //引入类库
 use VelWS\WSST; //使用命名空间
 
-//初始化WSST类，需要传递网址（不带http wss ws等协议前缀），端口号，与SSL证书的链文件路径（cert_chain）。
+//初始化WSST类，需要传递网址（不带http wss ws等协议前缀），端口号，与SSL证书的链文件路径（fullchain）。
 $ws = new WSST("localhost",10443,__DIR__."/cert/certchain.pem");
 $ws->trigger("customEvent",arg1,arg2,.....); //触发事件，第一个参数是事件名，也就是定义在服务器文件中的函数名，之后的参数为事件的参数，可以有任意多个。
 ```
