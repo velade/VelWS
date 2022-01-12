@@ -11,6 +11,7 @@ class WSS
   protected $transport = "tlsv1.3";
   protected $sslcert = __DIR__ . '/cert/cert.pem';
   protected $sslkey = __DIR__ . '/cert/key.pem';
+  protected $sslfullchain = '';
 
   protected $server;
   protected $ssl;
@@ -22,16 +23,28 @@ class WSS
     foreach($options as $key => $val){
       $this->$key = $val;
     }
-    $this->ssl = [
-      'ssl' => [
-        'local_cert'  => $this->sslcert,
-        'local_pk'    => $this->sslkey,
-        'disable_compression' => true,
-        'verify_peer'         => false,
-        'ssltransport' => $this->transport,
-        'allow_self_signed' => true
-      ]
-    ];
+    if($this->sslfullchain != ""){
+      $this->ssl = [
+        'ssl' => [
+          'local_cert'  => $this->sslfullchain,
+          'disable_compression' => true,
+          'verify_peer'         => false,
+          'ssltransport' => $this->transport,
+          'allow_self_signed' => true
+        ]
+      ];
+    }else{
+      $this->ssl = [
+        'ssl' => [
+          'local_cert'  => $this->sslcert,
+          'local_pk'    => $this->sslkey,
+          'disable_compression' => true,
+          'verify_peer'         => false,
+          'ssltransport' => $this->transport,
+          'allow_self_signed' => true
+        ]
+      ];
+    }
   }
 
   protected function conn(){

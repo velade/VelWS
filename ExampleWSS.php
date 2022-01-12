@@ -14,7 +14,8 @@ $ws = new WSS([
     "recv" => "velws_recv", //收到消息时回调函数名，也可直接以默认名velws_recv建立函数。
     "transport" => "tlsv1.3", //传输协议
     "sslcert" => __DIR__ . '/cert/cert.pem', //ssl公钥文件路径
-    "sslkey" => __DIR__ . '/cert/key.pem' //ssl私钥文件路径
+    "sslkey" => __DIR__ . '/cert/key.pem', //ssl私钥文件路径
+    "sslfullchain" => __DIR__ . '/cert/certchain.pem' //ssl完整链，传此参数可替代分开的sslcert与sslkey，此参数优先于其它证书设定。
 ]
 );
 $ws->start(); //启动服务器
