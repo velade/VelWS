@@ -12,6 +12,7 @@ class WSS
   protected $sslcert = __DIR__ . '/cert/cert.pem';
   protected $sslkey = __DIR__ . '/cert/key.pem';
   protected $sslfullchain = '';
+  protected $version = "1.1";
 
   protected $server;
   protected $ssl;
@@ -48,7 +49,7 @@ class WSS
   }
 
   protected function conn(){
-    echo "\033cVelWS WSS Server v1.0 by VelHLKJ".PHP_EOL."  ";
+    echo "\033cVelWS WSS Server v{$this->version} by VelHLKJ".PHP_EOL."  ";
     $ssl_context = stream_context_create($this->ssl);
     $this->tryWriteLog("Init","Creating SSL context.");
     $this->tryWriteLog("Init","Creating WSS server.");
@@ -239,7 +240,7 @@ class WSS
 class WS extends WSS {
   protected $transport = "tcp";
   protected function conn(){
-    echo "\033cVelWS WS Server v1.0 by VelHLKJ".PHP_EOL."  ";
+    echo "\033cVelWS WS Server v{$this->version} by VelHLKJ".PHP_EOL."  ";
     $this->tryWriteLog("Init","Creating WS server.");
     if(!$this->server = stream_socket_server("{$this->transport}://{$this->host}:{$this->port}",$errno,$errstr,STREAM_SERVER_BIND | STREAM_SERVER_LISTEN)){
       $this->echoMsg("System","Server startup failed! - $errstr ($errno)","red");
