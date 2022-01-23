@@ -12,7 +12,8 @@ class WSS
   protected $sslcert = __DIR__ . '/cert/cert.pem';
   protected $sslkey = __DIR__ . '/cert/key.pem';
   protected $sslfullchain = '';
-  protected $version = "1.1";
+  protected $version = "1.2";
+  protected $logpath = '';
 
   protected $server;
   protected $ssl;
