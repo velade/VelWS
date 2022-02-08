@@ -1,6 +1,6 @@
 <?php
 namespace VelWS;
-
+error_reporting(E_ERROR);
 class WSS
 {
   protected $host = "0.0.0.0";
